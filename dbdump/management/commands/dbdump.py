@@ -31,7 +31,7 @@ class Command(BaseCommand):
         self.compress = options.get('compression_command')
         self.quiet = options.get('quiet')
         self.debug = options.get('debug')
-	self.pgpass = options.get('pgpass')
+        self.pgpass = options.get('pgpass')
 
         if self.db_name not in settings.DATABASES:
             raise CommandError('Database %s is not defined in settings.DATABASES' % self.db_name)
@@ -59,7 +59,7 @@ class Command(BaseCommand):
         else:
             outfile = os.path.join(backup_directory, filename)
 
-	raw_args = options['raw_args']
+        raw_args = options['raw_args']
 
         if 'mysql' in self.engine:
             self.do_mysql_backup(outfile, raw_args=raw_args)
