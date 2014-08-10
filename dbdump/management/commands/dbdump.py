@@ -20,7 +20,7 @@ class Command(BaseCommand):
         make_option('--compress', dest='compression_command', help='Optional command to run (e.g., gzip) to compress output file.'),
         make_option('--quiet', dest='quiet', action='store_true', default=False, help='Be silent.'),
         make_option('--debug', dest='debug', action='store_true', default=False, help='Show commands that are being executed.'),
-        make_option('--pgpass', dest='pgpass', action='store_true', default=False, help='Use the ~/.pgdump file for password instead of prompting (PostgreSQL only).'),
+        make_option('--pgpass', dest='pgpass', action='store_true', default=False, help='Use the ~/.pgpass file for password instead of prompting (PostgreSQL only).'),
         make_option('--raw-args', dest='raw_args', default='', help='Argument(s) to pass to database dump command as is'),
     )
 
