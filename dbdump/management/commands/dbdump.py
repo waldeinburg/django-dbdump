@@ -4,7 +4,7 @@ Command to do a database dump using database's native tools.
 Originally inspired by http://djangosnippets.org/snippets/823/
 """
 
-import os, popen2, time, shutil, sys
+import os, time, shutil, sys
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
@@ -20,7 +20,6 @@ class Command(BaseCommand):
         make_option('--compress', dest='compression_command', help='Optional command to run (e.g., gzip) to compress output file.'),
         make_option('--quiet', dest='quiet', action='store_true', default=False, help='Be silent.'),
         make_option('--debug', dest='debug', action='store_true', default=False, help='Show commands that are being executed.'),
-        make_option('--pgpass', dest='pgpass', action='store_true', default=False, help='Use the ~/.pgpass file for password instead of prompting (PostgreSQL only).'),
         make_option('--raw-args', dest='raw_args', default='', help='Argument(s) to pass to database dump command as is'),
     )
 
@@ -31,7 +30,6 @@ class Command(BaseCommand):
         self.compress = options.get('compression_command')
         self.quiet = options.get('quiet')
         self.debug = options.get('debug')
-        self.pgpass = options.get('pgpass')
 
         if self.db_name not in settings.DATABASES:
             raise CommandError('Database %s is not defined in settings.DATABASES' % self.db_name)
@@ -125,8 +123,6 @@ class Command(BaseCommand):
         main_args = []
         if self.user:
             main_args += ['--username=%s' % self.user]
-        if self.password and not self.pgpass:
-            main_args += ['--password']
         if self.host:
             main_args += ['--host=%s' % self.host]
         if self.port:
@@ -143,7 +139,7 @@ class Command(BaseCommand):
         if outfile != self.OUTPUT_STDOUT:
             command += ' > %s' % outfile
 
-        self.run_postgresql_command(command, outfile)
+        self.run_command(command)
 
         if self.empty_tables:
             no_data_args = main_args[:] + ['--schema-only']
@@ -155,17 +151,4 @@ class Command(BaseCommand):
             if outfile != self.OUTPUT_STDOUT:
                 command += ' >> %s' % outfile
 
-            self.run_postgresql_command(command, outfile)
-
-    def run_postgresql_command(self, command, outfile):
-        if self.debug:
-            print command
-
-        pipe = popen2.Popen4(command)
-
-        if self.password:
-            pipe.tochild.write('%s\n' % self.password)
-            pipe.tochild.close()
-
-        if outfile == self.OUTPUT_STDOUT:
-            shutil.copyfileobj(pipe.fromchild, sys.stdout)
+            self.run_command(command)
