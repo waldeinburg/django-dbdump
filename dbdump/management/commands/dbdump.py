@@ -20,19 +20,28 @@ class Command(BaseCommand):
         make_option('--compress', dest='compression_command', help='Optional command to run (e.g., gzip) to compress output file.'),
         make_option('--quiet', dest='quiet', action='store_true', default=False, help='Be silent.'),
         make_option('--debug', dest='debug', action='store_true', default=False, help='Show commands that are being executed.'),
+        make_option('--pgpass', dest='pgpass', action='store_true', default=False, help='PostgreSQL only. Use ~/.pgpass (or prompt for password if not existing) instead of creating a temporary password file.'),
+        make_option('--pgpass-file', dest='pgpass_file', default='./.pgpass', help='PostgreSQL only. Name of the temporary (unless existing) password file (defaults to ./.pgpass)'),
         make_option('--raw-args', dest='raw_args', default='', help='Argument(s) to pass to database dump command as is'),
     )
 
     OUTPUT_STDOUT = object()
+    pgpass_is_tmp = True
+    pgpass_created = False
 
     def handle(self, *args, **options):
         self.db_name = options.get('database_name', 'default')
         self.compress = options.get('compression_command')
         self.quiet = options.get('quiet')
         self.debug = options.get('debug')
+        self.pgpass = options.get('pgpass')
+        self.pgpass_file = options.get('pgpass_file')
 
         if self.db_name not in settings.DATABASES:
             raise CommandError('Database %s is not defined in settings.DATABASES' % self.db_name)
+
+        if os.path.exists(self.pgpass_file):
+            self.pgpass_is_tmp = False
 
         self.engine = settings.DATABASES[self.db_name].get('ENGINE')
         self.db = settings.DATABASES[self.db_name].get('NAME')
@@ -116,6 +125,12 @@ class Command(BaseCommand):
 
         os.system(command)
 
+    def __del__(self):
+        if self.pgpass_created:
+            if not self.quiet:
+                print 'Removing temporary password file %s' % self.pgpass_file
+            os.remove(self.pgpass_file)
+
     def do_postgresql_backup(self, outfile, raw_args=''):
         if not self.quiet:
             print 'Doing PostgreSQL backup of database "%s" into %s' % (self.db, outfile)
@@ -129,6 +144,20 @@ class Command(BaseCommand):
             main_args += ['--port=%s' % self.port]
         if raw_args:
             main_args += [raw_args]	
+        
+        if self.password and not self.pgpass and self.pgpass_is_tmp:
+            umask = os.umask(00077)
+            if not self.quiet:
+                print 'Creating temporary password file %s' % self.pgpass_file
+            f = open(self.pgpass_file, 'w')
+            self.pgpass_created = True
+            os.environ['PGPASSFILE'] = self.pgpass_file
+            host = self.host if self.host else '*'
+            port = self.port if self.port else '*'
+            user = self.user if self.user else '*'
+            f.write('%s:%s:%s:%s:%s\n' % (host, port, self.db, user, self.password))
+            f.close()
+            os.umask(umask)
  
         excluded_args = main_args[:]
         if self.excluded_tables or self.empty_tables:
