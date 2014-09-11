@@ -151,13 +151,13 @@ class Command(BaseCommand):
                 print 'Creating temporary password file %s' % self.pgpass_file
             f = open(self.pgpass_file, 'w')
             self.pgpass_created = True
-            os.environ['PGPASSFILE'] = self.pgpass_file
             host = self.host if self.host else '*'
             port = self.port if self.port else '*'
             user = self.user if self.user else '*'
             f.write('%s:%s:%s:%s:%s\n' % (host, port, self.db, user, self.password))
             f.close()
             os.umask(umask)
+            os.environ['PGPASSFILE'] = self.pgpass_file
  
         excluded_args = main_args[:]
         if self.excluded_tables or self.empty_tables:
